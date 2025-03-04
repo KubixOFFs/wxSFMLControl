@@ -1,72 +1,61 @@
 #include <wx/wx.h>
 #include <SFML/Graphics.hpp>
+#include <SFML/Window.hpp>
 
-class SFMLCanvas : public wxControl {
-private:
-    sf::RenderTexture renderTexture;
-    wxBitmap wxBmp;
-    bool initialized = false;
-
+// Klasa głównego okna aplikacji
+class MyFrame : public wxFrame
+{
 public:
-    SFMLCanvas(wxWindow* parent, wxWindowID id)
-        : wxControl(parent, id, wxDefaultPosition, wxSize(400, 300), wxWANTS_CHARS) {
+    MyFrame(const wxString& title)
+        : wxFrame(nullptr, wxID_ANY, title)
+    {
+        // Tworzymy panel, który będzie hostował SFML
+        panel = new wxPanel(this, wxID_ANY);
 
-        SetBackgroundStyle(wxBG_STYLE_PAINT);
+        // Ustawiamy rozmiar panelu
+        panel->SetSize(400, 400);
 
-        Bind(wxEVT_PAINT, &SFMLCanvas::OnPaint, this);
-        Bind(wxEVT_SIZE, &SFMLCanvas::OnSize, this);
-        Bind(wxEVT_ERASE_BACKGROUND, &SFMLCanvas::OnEraseBackground, this);
-    }
+        // Tworzymy okno SFML, przekazując uchwyt panelu
+        sf::RenderWindow sfmlWindow;
+        sfmlWindow.create(panel->GetHandle());
 
-    void InitializeSFML() {
-        if (initialized) return;
-        wxSize size = GetClientSize();
-        if (size.x <= 0 || size.y <= 0) return;
+        // Główna pętla renderowania
+        while (sfmlWindow.isOpen())
+        {
+            // Obsługa zdarzeń SFML
+            sf::Event event;
+            while (sfmlWindow.pollEvent(event))
+            {
+                if (event.type == sf::Event::Closed)
+                    sfmlWindow.close();
+            }
 
-        // Tworzymy teksturę do rysowania SFML
-        renderTexture.create(size.x, size.y);
+            // Czyszczenie ekranu
+            sfmlWindow.clear();
 
-        // Rysujemy grafikę SFML tylko raz
-        renderTexture.clear(sf::Color::Black);
-        
-        sf::CircleShape circle(50.0f);
-        circle.setFillColor(sf::Color::Green);
-        circle.setPosition(size.x / 2 - 50, size.y / 2 - 50);
-        
-        renderTexture.draw(circle);
-        renderTexture.display();
+            // Rysowanie zielonego kwadratu
+            sf::RectangleShape rectangle(sf::Vector2f(100.0f, 100.0f));
+            rectangle.setFillColor(sf::Color::Green);
+            rectangle.setPosition(150.0f, 150.0f);
+            sfmlWindow.draw(rectangle);
 
-        // Konwersja tekstury SFML do wxWidgets
-        sf::Image sfmlImage = renderTexture.getTexture().copyToImage();
-        wxImage wxImg(sfmlImage.getSize().x, sfmlImage.getSize().y, sfmlImage.getPixelsPtr(), true);
-        wxBmp = wxBitmap(wxImg);
-
-        initialized = true;
-    }
-
-    void OnPaint(wxPaintEvent&) {
-        wxPaintDC dc(this);
-        InitializeSFML();  // Jeśli to pierwsze rysowanie, generujemy grafikę SFML
-        if (wxBmp.IsOk()) {
-            dc.DrawBitmap(wxBmp, 0, 0);
+            // Wyświetlenie zawartości
+            sfmlWindow.display();
         }
     }
 
-    void OnSize(wxSizeEvent& event) {
-        initialized = false;  // Jeśli zmieniamy rozmiar, trzeba wygenerować nową grafikę
-        Refresh();
-        event.Skip();
-    }
-
-    void OnEraseBackground(wxEraseEvent&) {}  
+private:
+    wxPanel* panel;
 };
 
-class MyApp : public wxApp {
+// Klasa aplikacji wxWidgets
+class MyApp : public wxApp
+{
 public:
-    virtual bool OnInit() {
-        wxFrame* frame = new wxFrame(nullptr, wxID_ANY, "SFML w wxWidgets", wxDefaultPosition, wxSize(800, 600));
-        new SFMLCanvas(frame, wxID_ANY);
-        frame->Show();
+    virtual bool OnInit()
+    {
+        MyFrame* frame = new MyFrame("SFML w wxWidgets");
+        frame->Show(true);
         return true;
     }
 };
