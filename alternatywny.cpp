@@ -15,10 +15,11 @@ public:
         : wxControl(parent, id, wxDefaultPosition, wxSize(400, 300), wxWANTS_CHARS),
           timer(this), circle(50.0f) {  
 
+        SetBackgroundStyle(wxBG_STYLE_PAINT);  // Kluczowe! Poprawia rysowanie
+
         circle.setFillColor(sf::Color::Green);
         circle.setPosition(100, 100);
 
-        // Wiązanie eventów za pomocą Bind()
         Bind(wxEVT_PAINT, &SFMLCanvas::OnPaint, this);
         Bind(wxEVT_SIZE, &SFMLCanvas::OnSize, this);
         Bind(wxEVT_ERASE_BACKGROUND, &SFMLCanvas::OnEraseBackground, this);
@@ -40,6 +41,7 @@ public:
 
         if (!renderWindow) return;
 
+        renderWindow->setActive(true);
         renderWindow->clear(sf::Color::Black);
         renderWindow->draw(circle);
         renderWindow->display();
@@ -52,7 +54,7 @@ public:
     }
 
     void ProcessEvents() {
-       while (auto sfEvent = sfWindow->pollEvent()) // SFML 3.0 zwraca std::optional<sf::Event>
+        while (auto sfEvent = sfWindow->pollEvent()) // SFML 3.0 zwraca std::optional<sf::Event>
 {
     if (sfEvent->is<sf::Event::Closed>()) //  Nowe API SFML 3.0
     {
