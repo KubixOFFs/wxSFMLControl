@@ -15,19 +15,17 @@ public:
         : wxControl(parent, id, wxDefaultPosition, wxSize(400, 300), wxWANTS_CHARS),
           timer(this), circle(50.0f) {  
 
-        SetBackgroundStyle(wxBG_STYLE_PAINT);  // Kluczowe! Zapobiega migotaniu
+        SetBackgroundStyle(wxBG_STYLE_PAINT);  
 
         circle.setFillColor(sf::Color::Green);
-        circle.setRadius(50.0f);
-        circle.setOrigin(circle.getRadius(), circle.getRadius());  // Ustawienie środka koła
-        circle.setPosition(200, 150);  // Środek okna
+        circle.setPosition(100, 100);
 
         Bind(wxEVT_PAINT, &SFMLCanvas::OnPaint, this);
         Bind(wxEVT_SIZE, &SFMLCanvas::OnSize, this);
         Bind(wxEVT_ERASE_BACKGROUND, &SFMLCanvas::OnEraseBackground, this);
         Bind(wxEVT_TIMER, &SFMLCanvas::OnTimer, this);
 
-        timer.Start(16);  // Około 60 FPS
+        timer.Start(16);  
     }
 
     void InitializeSFML() {
@@ -39,7 +37,7 @@ public:
     }
 
     void OnPaint(wxPaintEvent&) {
-        wxClientDC dc(this);  // Konieczne dla poprawnego rysowania wxWidgets
+        wxPaintDC dc(this);
         InitializeSFML();  
 
         if (!renderWindow) return;
@@ -51,19 +49,7 @@ public:
     }
 
     void OnTimer(wxTimerEvent&) {
-        if (!renderWindow) return;
-        ProcessEvents();
-        Refresh();  // Wymuszenie wywołania OnPaint()
-    }
-
-    void ProcessEvents() {
-       while (auto sfEvent = sfWindow->pollEvent()) // SFML 3.0 zwraca std::optional<sf::Event>
-{
-    if (sfEvent->is<sf::Event::Closed>()) //  Nowe API SFML 3.0
-    {
-        Close();
-    }
-}
+        Refresh();  
     }
 
     void OnSize(wxSizeEvent& event) {
@@ -74,7 +60,7 @@ public:
         event.Skip();
     }
 
-    void OnEraseBackground(wxEraseEvent&) {}  // Zapobiega migotaniu
+    void OnEraseBackground(wxEraseEvent&) {}  
 };
 
 class MyApp : public wxApp {
