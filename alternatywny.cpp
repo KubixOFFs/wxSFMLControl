@@ -1,59 +1,65 @@
-#include <wx/wx.h>
-#include <SFML/Graphics.hpp>
-
-class MyApp : public wxApp
-{
-public:
-    virtual bool OnInit();
-};
-
-class MyFrame : public wxFrame
-{
-public:
-    MyFrame();
-};
-
-bool MyApp::OnInit()
-{
-    MyFrame* frame = new MyFrame();
-    frame->Show(true);
-    return true;
-}
-
-class SFMLCanvas : public wxControl
-{
-public:
-    SFMLCanvas(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size)
-        : wxControl(parent, id, pos, size, wxBORDER_NONE)
-    {
-        SetBackgroundStyle(wxBG_STYLE_PAINT);
-        sfWindow = new sf::RenderWindow((sf::WindowHandle)GetHandle());
-        Bind(wxEVT_IDLE, &SFMLCanvas::OnIdle, this);
-    }
-
-    void OnIdle(wxIdleEvent& event)
-    {
-        while (auto sfEvent = sfWindow->pollEvent()) // SFML 3.0 zwraca std::optional<sf::Event>
-        {
-            if (sfEvent->is<sf::Event::Closed>()) // ✅ Nowe API SFML 3.0
-            {
-                Close();
-            }
-        }
-
-        sfWindow->clear(sf::Color::Blue);
-        sfWindow->display();
-
-        event.RequestMore(); // Zapewnia ciągłe odświeżanie
-    }
-
+class SFMLCanvas : public wxControl {
 private:
-    sf::RenderWindow* sfWindow;
+    std::unique_ptr<sf::RenderWindow> renderWindow;
+    wxTimer timer;
+
+public:
+    SFMLCanvas(wxWindow* parent, wxWindowID id)
+        : wxControl(parent, id, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS), timer(this) {
+        
+        // Pobranie uchwytu okna (SFML potrzebuje HWND na Windowsie)
+        sf::WindowHandle handle = GetHandle();
+        
+        // Tworzenie SFML RenderWindow
+        renderWindow = std::make_unique<sf::RenderWindow>(handle);
+
+        // Uruchomienie timera do odświeżania renderowania
+        timer.Bind(wxEVT_TIMER, &SFMLCanvas::OnTimer, this);
+        timer.Start(16);  // ~60 FPS
+    }
+
+    void OnTimer(wxTimerEvent&) {
+        if (renderWindow) {
+            renderWindow->clear(sf::Color::Black);
+            // Rysowanie SFML
+            renderWindow->display();
+        }
+    }
+
+    void OnPaint(wxPaintEvent&) {
+        wxPaintDC dc(this);
+        if (renderWindow) {
+            renderWindow->setActive(true);  // Upewnij się, że SFML ma aktywny kontekst
+            renderWindow->display();
+        }
+    }
+
+    void OnSize(wxSizeEvent& event) {
+        if (renderWindow) {
+            wxSize size = GetClientSize();
+            renderWindow->setSize(sf::Vector2u(size.x, size.y));
+        }
+        event.Skip();
+    }
+
+    void OnEraseBackground(wxEraseEvent&) {}  // Zapobiega migotaniu
+
+    wxDECLARE_EVENT_TABLE();
 };
 
-MyFrame::MyFrame() : wxFrame(nullptr, wxID_ANY, "wxWidgets + SFML", wxDefaultPosition, wxSize(800, 600))
-{
-    new SFMLCanvas(this, wxID_ANY, wxPoint(10, 10), wxSize(400, 400));
-}
+wxBEGIN_EVENT_TABLE(SFMLCanvas, wxControl)
+    EVT_PAINT(SFMLCanvas::OnPaint)
+    EVT_SIZE(SFMLCanvas::OnSize)
+    EVT_ERASE_BACKGROUND(SFMLCanvas::OnEraseBackground)
+wxEND_EVENT_TABLE()
 
-wxIMPLEMENT_APP(MyApp);
+
+
+void ProcessEvents() {
+    sf::Event event;
+    while (renderWindow->pollEvent(event)) {
+        if (event.type == sf::Event::Closed) {
+            renderWindow->close();
+        }
+    }
+}
