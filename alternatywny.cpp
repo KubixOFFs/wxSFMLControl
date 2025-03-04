@@ -15,15 +15,14 @@ public:
         : wxControl(parent, id, wxDefaultPosition, wxSize(400, 300), wxWANTS_CHARS),
           timer(this), circle(50.0f) {  
 
-        SetBackgroundStyle(wxBG_STYLE_PAINT);  
+        SetBackgroundStyle(wxBG_STYLE_CUSTOM);  
 
         circle.setFillColor(sf::Color::Green);
         circle.setPosition(100, 100);
 
-        Bind(wxEVT_PAINT, &SFMLCanvas::OnPaint, this);
         Bind(wxEVT_SIZE, &SFMLCanvas::OnSize, this);
         Bind(wxEVT_ERASE_BACKGROUND, &SFMLCanvas::OnEraseBackground, this);
-        Bind(wxEVT_TIMER, &SFMLCanvas::OnTimer, this);
+        Bind(wxEVT_IDLE, &SFMLCanvas::OnIdle, this);
 
         timer.Start(16);  
     }
@@ -36,9 +35,8 @@ public:
         initialized = true;
     }
 
-    void OnPaint(wxPaintEvent&) {
-        wxPaintDC dc(this);
-        InitializeSFML();  
+    void OnIdle(wxIdleEvent&) {
+        InitializeSFML();
 
         if (!renderWindow) return;
 
@@ -46,10 +44,9 @@ public:
         renderWindow->clear(sf::Color::Black);
         renderWindow->draw(circle);
         renderWindow->display();
-    }
 
-    void OnTimer(wxTimerEvent&) {
-        Refresh();  
+        wxMilliSleep(16);  // Unikamy nadmiernego zużycia CPU
+        Refresh();  // Wymuszamy kolejne odświeżenie
     }
 
     void OnSize(wxSizeEvent& event) {
