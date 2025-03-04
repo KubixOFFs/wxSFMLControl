@@ -18,17 +18,14 @@ public:
         // Tworzymy okno SFML, przekazując uchwyt panelu
         sf::RenderWindow sfmlWindow;
         sfmlWindow.create(panel->GetHandle());
-
-        // Główna pętla renderowania
-        while (sfmlWindow.isOpen())
-        {
-            // Obsługa zdarzeń SFML
-            sf::Event event;
-            while (sfmlWindow.pollEvent(event))
-            {
-                if (event.type == sf::Event::Closed)
-                    sfmlWindow.close();
-            }
+while (sfmlWindow.isOpen())
+{
+    // Obsługa zdarzeń SFML
+    if (auto event = sfmlWindow.poll_event(); event)
+    {
+        if (event->type == sf::Event::Closed)
+            sfmlWindow.close();
+    }
 
             // Czyszczenie ekranu
             sfmlWindow.clear();
