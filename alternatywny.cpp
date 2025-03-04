@@ -8,44 +8,57 @@ private:
     std::unique_ptr<sf::RenderWindow> renderWindow;
     wxTimer timer;
     sf::CircleShape circle;
+    bool initialized = false;
 
 public:
     SFMLCanvas(wxWindow* parent, wxWindowID id)
         : wxControl(parent, id, wxDefaultPosition, wxSize(400, 300), wxWANTS_CHARS),
-          timer(this), circle(50.0f) {  // Tworzymy zielone koło
+          timer(this), circle(50.0f) {  
 
         circle.setFillColor(sf::Color::Green);
         circle.setPosition(100, 100);
 
-        // Pobranie uchwytu okna i stworzenie SFML RenderWindow
-        sf::WindowHandle handle = GetHandle();
-        renderWindow = std::make_unique<sf::RenderWindow>(handle);
-
         // Wiązanie eventów za pomocą Bind()
-        Bind(wxEVT_TIMER, &SFMLCanvas::OnTimer, this);
+        Bind(wxEVT_PAINT, &SFMLCanvas::OnPaint, this);
         Bind(wxEVT_SIZE, &SFMLCanvas::OnSize, this);
         Bind(wxEVT_ERASE_BACKGROUND, &SFMLCanvas::OnEraseBackground, this);
+        Bind(wxEVT_TIMER, &SFMLCanvas::OnTimer, this);
 
-        // Timer do odświeżania renderowania
         timer.Start(16);  // Około 60 FPS
+    }
+
+    void InitializeSFML() {
+        if (initialized) return;
+        sf::WindowHandle handle = GetHandle();
+        renderWindow = std::make_unique<sf::RenderWindow>(handle);
+        initialized = true;
+    }
+
+    void OnPaint(wxPaintEvent&) {
+        wxPaintDC dc(this);  // Konieczne do poprawnego działania wxWidgets
+        InitializeSFML();  // Tworzymy SFML RenderWindow tylko raz
+
+        if (!renderWindow) return;
+
+        renderWindow->clear(sf::Color::Black);
+        renderWindow->draw(circle);
+        renderWindow->display();
     }
 
     void OnTimer(wxTimerEvent&) {
         if (!renderWindow) return;
-
         ProcessEvents();
-        renderWindow->clear(sf::Color::Black);  // Tło czarne
-        renderWindow->draw(circle);  // Rysowanie koła
-        renderWindow->display();
+        Refresh();  // Wymuszenie wywołania OnPaint()
     }
 
     void ProcessEvents() {
-        sf::Event event;
-        while (renderWindow->pollEvent(event)) {
-            if (event.type == sf::Event::Closed) {
-                renderWindow->close();
-            }
-        }
+       while (auto sfEvent = sfWindow->pollEvent()) // SFML 3.0 zwraca std::optional<sf::Event>
+{
+    if (sfEvent->is<sf::Event::Closed>()) //  Nowe API SFML 3.0
+    {
+        Close();
+    }
+}
     }
 
     void OnSize(wxSizeEvent& event) {
