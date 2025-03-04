@@ -1,63 +1,76 @@
 #include <wx/wx.h>
 #include <wx/timer.h>
 #include <SFML/Graphics.hpp>
-#include <SFML/Window.hpp>
 
 class SFMLCanvas : public wxControl {
 private:
-    std::unique_ptr<sf::RenderWindow> renderWindow;
-    wxTimer timer;
+    sf::RenderTexture renderTexture;
+    sf::Sprite sprite;
     sf::CircleShape circle;
+    wxTimer timer;
     bool initialized = false;
 
 public:
     SFMLCanvas(wxWindow* parent, wxWindowID id)
         : wxControl(parent, id, wxDefaultPosition, wxSize(400, 300), wxWANTS_CHARS),
-          timer(this), circle(50.0f) {  
+          timer(this), circle(50.0f) {
 
-        SetBackgroundStyle(wxBG_STYLE_CUSTOM);  
+        SetBackgroundStyle(wxBG_STYLE_PAINT);
 
+        // Ustawienie koła
         circle.setFillColor(sf::Color::Green);
-        circle.setPosition(100, 100);
+        circle.setRadius(50.0f);
+        circle.setOrigin(circle.getRadius(), circle.getRadius());
+        circle.setPosition(200, 150);  
 
+        Bind(wxEVT_PAINT, &SFMLCanvas::OnPaint, this);
         Bind(wxEVT_SIZE, &SFMLCanvas::OnSize, this);
+        Bind(wxEVT_TIMER, &SFMLCanvas::OnTimer, this);
         Bind(wxEVT_ERASE_BACKGROUND, &SFMLCanvas::OnEraseBackground, this);
-        Bind(wxEVT_IDLE, &SFMLCanvas::OnIdle, this);
 
-        timer.Start(16);  
+        timer.Start(16);
     }
 
     void InitializeSFML() {
         if (initialized) return;
-        sf::WindowHandle handle = GetHandle();
-        renderWindow = std::make_unique<sf::RenderWindow>(handle);
-        renderWindow->setActive(true);
+        wxSize size = GetClientSize();
+        renderTexture.create(size.x, size.y);
+        sprite.setTexture(renderTexture.getTexture());
         initialized = true;
     }
 
-    void OnIdle(wxIdleEvent&) {
+    void OnPaint(wxPaintEvent&) {
+        wxPaintDC dc(this);
         InitializeSFML();
 
-        if (!renderWindow) return;
+        // Rysowanie SFML na teksturze
+        renderTexture.clear(sf::Color::Black);
+        renderTexture.draw(circle);
+        renderTexture.display();
 
-        renderWindow->setActive(true);
-        renderWindow->clear(sf::Color::Black);
-        renderWindow->draw(circle);
-        renderWindow->display();
+        // Pobranie tekstury SFML jako obraz wxWidgets
+        sf::Image sfmlImage = renderTexture.getTexture().copyToImage();
+        wxImage wxImg(sfmlImage.getSize().x, sfmlImage.getSize().y, sfmlImage.getPixelsPtr(), true);
+        wxBitmap wxBmp(wxImg);
 
-        wxMilliSleep(16);  // Unikamy nadmiernego zużycia CPU
-        Refresh();  // Wymuszamy kolejne odświeżenie
+        // Rysowanie w wxWidgets
+        dc.DrawBitmap(wxBmp, 0, 0);
     }
 
     void OnSize(wxSizeEvent& event) {
-        if (renderWindow) {
+        if (initialized) {
             wxSize size = GetClientSize();
-            renderWindow->setSize(sf::Vector2u(size.x, size.y));
+            renderTexture.create(size.x, size.y);
+            sprite.setTexture(renderTexture.getTexture(), true);
         }
         event.Skip();
     }
 
-    void OnEraseBackground(wxEraseEvent&) {}  
+    void OnTimer(wxTimerEvent&) {
+        Refresh();
+    }
+
+    void OnEraseBackground(wxEraseEvent&) {}
 };
 
 class MyApp : public wxApp {
